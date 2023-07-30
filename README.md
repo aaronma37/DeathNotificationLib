@@ -5,13 +5,18 @@ Including this library in your addon will automatically
 * Have the player join the unified death notification channel
 * Register the player for death notifications.  The addon which includes this library needs to implement a function to handle death notifications
 
+### Requirements
+
+* ChatThrottleLib
+
 ### How to add to your addon
 
 1) Copy this repo into your addons directory.  Something like `<youraddonroot>/Libs/DeathNotificationLib/`
 
-2) In `<youraddon>.toc`, include `death_notification_lib.lua` somewhere early in file loading.  E.g.
+2) In `<youraddon>.toc`, include `DeathNotificationLib.lua` somewhere early in file loading.  Note, this requires ChatThrottleLib.  E.g.
 
-`Libs/DeathNotificationLib/death_notification_lib.lua`
+`Libs/ChatThrottleLib.lua`
+`Libs/DeathNotificationLib/DeathNotificationLib.lua`
 `<youraddon>.lua`
 
 3) Register a function to hook onto death notification events (use `DeathNotificationLib_HookOnNewEntry`).  Here are the fields
@@ -39,7 +44,7 @@ You can register `DeathNotificationLib_HookOnNewEntrySecure` instead, which will
 
 4) Optional: Include `id_to_npc_classic.lua/npc_to_id_classic.lua` to get tables that map npc name to their id and back
 
-`Libs/DeathNotificationLib/death_notification_lib.lua`
+`Libs/DeathNotificationLib/DeathNotificationLib.lua`
 
 ### Some notes
 
