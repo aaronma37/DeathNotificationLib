@@ -5,6 +5,9 @@ Including this library in your addon will automatically
 * Have the player join the unified death notification channel
 * Register the player for death notifications.  The addon which includes this library needs to implement a function to handle death notifications
 
+Only for classic era and Hardcore servers.
+
+
 ### Requirements
 
 * ChatThrottleLib
@@ -13,9 +16,11 @@ Including this library in your addon will automatically
 
 1) Copy this repo into your addons directory.  Something like `<youraddonroot>/Libs/DeathNotificationLib/`
 
-2) In `<youraddon>.toc`, include `DeathNotificationLib.lua` somewhere early in file loading.  Note, this requires ChatThrottleLib.  E.g.
+2) In `<youraddon>.toc`, include `DeathNotificationLib.lua` somewhere early in file loading.  Note, this requires ChatThrottleLib and the included `npc_to_id_classic./lua/id_to_npc_classic.lua`.  E.g.
 
 `Libs/ChatThrottleLib.lua`
+`Libs/DeathNotificationLib/npc_to_id_classic.lua`
+`Libs/DeathNotificationLib/id_to_npc_classic.lua`
 `Libs/DeathNotificationLib/DeathNotificationLib.lua`
 `<youraddon>.lua`
 
@@ -41,10 +46,6 @@ Including this library in your addon will automatically
 ```
 
 You can register `DeathNotificationLib_HookOnNewEntrySecure` instead, which will only notify when 2 guildmates to whomever died, acknowledge the death.
-
-4) Optional: Include `id_to_npc_classic.lua/npc_to_id_classic.lua` to get tables that map npc name to their id and back
-
-`Libs/DeathNotificationLib/DeathNotificationLib.lua`
 
 ### Some notes
 
