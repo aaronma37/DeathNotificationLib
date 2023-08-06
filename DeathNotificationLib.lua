@@ -29,8 +29,8 @@ local COMM_COMMANDS = {
 local COMM_COMMAND_DELIM = "$"
 local COMM_FIELD_DELIM = "~"
 local HC_DEATH_LOG_MAX = 100000
--- local sample_bliz_notification = "[Yazpad] has died at level 1 while in Coldridge Valley, slain by: Small Crag Boar."
--- CHAT_MSG_GUILD_DEATHS
+
+local _, _, _, tocversion = GetBuildInfo()
 
 local death_alerts_channel = "hcdeathalertschannel"
 local death_alerts_channel_pw = "hcdeathalertschannelpw"
@@ -317,6 +317,16 @@ local death_alert_out_queue = {}
 local death_alert_out_queue_guild_notification = {}
 local last_words_queue = {}
 
+local function fletcher16Raw(data)
+	local sum1 = 0
+	local sum2 = 0
+	for index = 1, #data do
+		sum1 = (sum1 + string.byte(string.sub(data, index, index))) % 255
+		sum2 = (sum2 + sum1) % 255
+	end
+	return bit.bor(bit.lshift(sum2, 8), sum1)
+end
+
 local function fletcher16(_player_data)
 	local data = _player_data["name"] .. _player_data["guild"] .. _player_data["level"]
 	local sum1 = 0
@@ -398,6 +408,12 @@ local function shouldCreateEntryGuildNotification(checksum)
 		return false
 	end
 	if entry_cache[checksum] then
+		return false
+	end
+	if
+		death_ping_guild_notification_cache_[checksum]["num_reported"] == nil
+		or death_ping_guild_notification_cache_[checksum]["num_reported"] < 2
+	then
 		return false
 	end
 	entry_cache[checksum] = 1
@@ -583,7 +599,7 @@ local function deathlogReceiveGuildMessage(sender, data)
 	death_ping_lru_cache_tbl[checksum]["self_report"] = 1
 	death_ping_lru_cache_tbl[checksum]["in_guild"] = 1
 	table.insert(broadcast_death_ping_queue, checksum) -- Must be added to queue to be broadcasted to network
-	local delay = 5.0 -- seconds; wait for last words
+	local delay = 3.5 -- seconds; wait for last words
 	C_Timer.After(delay, function()
 		if shouldCreateEntry(checksum) then
 			createEntry(checksum)
@@ -619,7 +635,7 @@ local function deathlogReceiveChannelMessageChecksum(sender, checksum)
 	end
 
 	death_ping_lru_cache_tbl[checksum]["peer_report"] = death_ping_lru_cache_tbl[checksum]["peer_report"] + 1
-	local delay = 5.0 -- seconds; wait for last words
+	local delay = 3.5 -- seconds; wait for last words
 	C_Timer.After(delay, function()
 		if shouldCreateEntry(checksum) then
 			createEntry(checksum)
@@ -687,7 +703,7 @@ local function deathlogReceiveChannelMessage(sender, data)
 	end)
 end
 
-local function deathlogReceiveGuildDeathNotification(sender, data)
+local function deathlogReceiveGuildDeathNotification(sender, data, doublechecksum)
 	if data == nil then
 		return
 	end
@@ -700,6 +716,12 @@ local function deathlogReceiveGuildDeathNotification(sender, data)
 	end
 
 	local checksum = fletcher16(decoded_player_data)
+
+	if tonumber(fletcher16Raw(sender .. data)) ~= tonumber(doublechecksum) then
+		print(sender, decoded_player_data["name"])
+		print(fletcher16Raw(sender .. data), doublechecksum)
+		return
+	end
 
 	if death_ping_guild_notification_cache_[checksum] == nil then
 		death_ping_guild_notification_cache_[checksum] = {}
@@ -792,6 +814,8 @@ local function sendNextInQueue()
 		local commMessage = COMM_COMMANDS["GUILD_DEATH_NOTIFICATION"]
 			.. COMM_COMMAND_DELIM
 			.. death_alert_out_queue_guild_notification[1]
+			.. COMM_COMMAND_DELIM
+			.. fletcher16Raw(UnitName("player") .. death_alert_out_queue_guild_notification[1])
 		CTL:SendChatMessage("BULK", COMM_NAME, commMessage, "CHANNEL", nil, channel_num)
 		print(commMessage)
 		table.remove(death_alert_out_queue_guild_notification, 1)
@@ -817,7 +841,9 @@ death_notification_lib_event_handler:RegisterEvent("CHAT_MSG_SAY")
 death_notification_lib_event_handler:RegisterEvent("CHAT_MSG_GUILD")
 death_notification_lib_event_handler:RegisterEvent("CHAT_MSG_PARTY")
 death_notification_lib_event_handler:RegisterEvent("PLAYER_ENTERING_WORLD")
-death_notification_lib_event_handler:RegisterEvent("CHAT_MSG_GUILD_DEATHS")
+if tocversion >= 11404 then
+	death_notification_lib_event_handler:RegisterEvent("CHAT_MSG_GUILD_DEATHS")
+end
 
 local function handleEvent(self, event, ...)
 	local arg = { ... }
@@ -826,7 +852,7 @@ local function handleEvent(self, event, ...)
 		if channel_name ~= death_alerts_channel then
 			return
 		end
-		local command, msg = string.split(COMM_COMMAND_DELIM, arg[1])
+		local command, msg, _doublechecksum = string.split(COMM_COMMAND_DELIM, arg[1])
 		if command == COMM_COMMANDS["BROADCAST_DEATH_PING_CHECKSUM"] then
 			local player_name_short, _ = string.split("-", arg[2])
 			if shadowbanned[player_name_short] then
@@ -905,7 +931,7 @@ local function handleEvent(self, event, ...)
 				shadowbanned[player_name_short] = 1
 			end
 
-			deathlogReceiveGuildDeathNotification(player_name_short, msg)
+			deathlogReceiveGuildDeathNotification(player_name_short, msg, _doublechecksum)
 			if debug then
 				print("death ping", msg)
 			end
@@ -973,5 +999,5 @@ end
 
 death_notification_lib_event_handler:SetScript("OnEvent", handleEvent)
 
-local sample_bliz_notification = "[Yazzpad] has died at level 1 while in Coldridge Valley, slain by: Small Crag Boar."
-handleEvent(nil, "CHAT_MSG_GUILD_DEATHS", sample_bliz_notification)
+-- local sample_bliz_notification = "[Yazzpad] has died at level 1 while in Coldridge Valley, slain by: Small Crag Boar."
+-- handleEvent(nil, "CHAT_MSG_GUILD_DEATHS", sample_bliz_notification)
