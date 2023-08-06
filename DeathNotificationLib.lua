@@ -718,8 +718,6 @@ local function deathlogReceiveGuildDeathNotification(sender, data, doublechecksu
 	local checksum = fletcher16(decoded_player_data)
 
 	if tonumber(fletcher16Raw(sender .. data)) ~= tonumber(doublechecksum) then
-		print(sender, decoded_player_data["name"])
-		print(fletcher16Raw(sender .. data), doublechecksum)
 		return
 	end
 
@@ -740,8 +738,6 @@ local function deathlogReceiveGuildDeathNotification(sender, data, doublechecksu
 	end
 	death_ping_guild_notification_cache_[checksum]["num_reported"] = death_ping_guild_notification_cache_[checksum]["num_reported"]
 		+ 1
-
-	print(decoded_player_data)
 
 	local delay = 6.0 -- seconds; wait for last words
 	C_Timer.After(delay, function()
@@ -817,7 +813,6 @@ local function sendNextInQueue()
 			.. COMM_COMMAND_DELIM
 			.. fletcher16Raw(UnitName("player") .. death_alert_out_queue_guild_notification[1])
 		CTL:SendChatMessage("BULK", COMM_NAME, commMessage, "CHANNEL", nil, channel_num)
-		print(commMessage)
 		table.remove(death_alert_out_queue_guild_notification, 1)
 		return
 	end
@@ -918,7 +913,6 @@ local function handleEvent(self, event, ...)
 
 		if command == COMM_COMMANDS["GUILD_DEATH_NOTIFICATION"] then
 			local player_name_short, _ = string.split("-", arg[2])
-			print(player_name_short)
 			if shadowbanned[player_name_short] then
 				return
 			end
